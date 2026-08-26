@@ -47,14 +47,29 @@ export const kgToGrams = (value: string): number | null => {
   return grams;
 };
 
-export const createWorkout = (startedAt: string): Workout => {
-  const date = startedAt.slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(startedAt))) {
+const workoutIdForDate = (date: string): string => {
+  const parsed = new Date(`${date}T12:00:00Z`);
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+    Number.isNaN(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== date
+  ) {
+    throw new Error("Fecha del entrenamiento no válida");
+  }
+  return date.replaceAll("-", "");
+};
+
+export const createWorkout = (
+  startedAt: string,
+  selectedDate = startedAt.slice(0, 10),
+): Workout => {
+  if (Number.isNaN(Date.parse(startedAt))) {
     throw new Error("Fecha de inicio no válida");
   }
+  const id = workoutIdForDate(selectedDate);
   return {
-    id: date.replaceAll("-", ""),
-    date,
+    id,
+    date: selectedDate,
     startedAt,
     finishedAt: null,
     durationMinutes: null,
@@ -66,6 +81,15 @@ export const createWorkout = (startedAt: string): Workout => {
     githubContentSha: null,
     updatedAt: startedAt,
   };
+};
+
+export const changeWorkoutDate = (workout: Workout, selectedDate: string): Workout => {
+  if (workout.status !== "draft") throw new Error("La sesión ya está finalizada");
+  return touch({
+    ...workout,
+    id: workoutIdForDate(selectedDate),
+    date: selectedDate,
+  });
 };
 
 const emptySet = (

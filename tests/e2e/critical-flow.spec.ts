@@ -17,10 +17,10 @@ const fillSet = async (
   await exercise.getByRole("button", { name: `Marcar serie ${index + 1} como completada` }).click();
 };
 
-const completedSetsInStorage = (page: Page) =>
+const activeWorkoutInStorage = (page: Page) =>
   page.evaluate(
     () =>
-      new Promise<number>((resolve, reject) => {
+      new Promise<{ date: string | null; completedSets: number }>((resolve, reject) => {
         const openRequest = indexedDB.open("fuerza-app");
         openRequest.onerror = () => reject(openRequest.error);
         openRequest.onsuccess = () => {
@@ -32,17 +32,20 @@ const completedSetsInStorage = (page: Page) =>
           getRequest.onerror = () => reject(getRequest.error);
           getRequest.onsuccess = () => {
             const workouts = getRequest.result as Array<{
+              date: string;
               status: string;
               exercises: Array<{ sets: Array<{ completed: boolean }> }>;
             }>;
             const active = workouts.find((workout) => workout.status === "draft");
             database.close();
-            resolve(
-              active?.exercises.reduce(
-                (total, exercise) => total + exercise.sets.filter((set) => set.completed).length,
-                0,
-              ) ?? 0,
-            );
+            resolve({
+              date: active?.date ?? null,
+              completedSets:
+                active?.exercises.reduce(
+                  (total, exercise) => total + exercise.sets.filter((set) => set.completed).length,
+                  0,
+                ) ?? 0,
+            });
           };
         };
       }),
@@ -61,7 +64,13 @@ test("conserva una sesión offline y sincroniza el Markdown al recuperar la red"
   await expect(page.getByText("Conexión verificada y guardada")).toBeVisible();
   await page.getByRole("button", { name: "Cerrar aviso" }).click();
   await page.getByRole("link", { name: "Inicio" }).click();
+  await page.getByLabel("Fecha del entrenamiento").fill("2026-08-20");
   await page.getByRole("button", { name: "Comenzar entrenamiento" }).click();
+  await expect(page.getByRole("heading", { name: "Entrenamiento", exact: true })).toBeVisible();
+  await expect(page.getByLabel("Fecha del entrenamiento")).toHaveValue("2026-08-20");
+  await page.getByLabel("Fecha del entrenamiento").fill("2026-08-19");
+  await expect(page.getByLabel("Fecha del entrenamiento")).toHaveValue("2026-08-19");
+  await expect.poll(async () => (await activeWorkoutInStorage(page)).date).toBe("2026-08-19");
 
   for (const [name, weight] of [
     ["3/4 sit-up", "20"],
@@ -77,11 +86,13 @@ test("conserva una sesión offline y sincroniza el Markdown al recuperar la red"
     await fillSet(page, name, 2, weight, "6");
   }
 
-  await expect.poll(() => completedSetsInStorage(page)).toBe(6);
+  await expect.poll(async () => (await activeWorkoutInStorage(page)).completedSets).toBe(6);
+  await expect.poll(async () => (await activeWorkoutInStorage(page)).date).toBe("2026-08-19");
   await page.evaluate(() => navigator.serviceWorker?.ready);
   await context.setOffline(true);
   await page.evaluate(() => window.location.reload());
-  await expect(page.getByRole("heading", { name: "Entrenamiento de hoy" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Entrenamiento", exact: true })).toBeVisible();
+  await expect(page.getByLabel("Fecha del entrenamiento")).toHaveValue("2026-08-19");
   await expect(page.getByText("alternate lateral pulldown")).toBeVisible();
   await page.getByRole("button", { name: "Finalizar entrenamiento" }).click();
   await page.getByRole("button", { name: "Confirmar finalización" }).click();

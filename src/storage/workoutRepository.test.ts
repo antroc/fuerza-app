@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { addExercise, completeSet, createWorkout, updateSet } from "../domain/workout";
+import {
+  addExercise,
+  changeWorkoutDate,
+  completeSet,
+  createWorkout,
+  updateSet,
+} from "../domain/workout";
 import { FuerzaDatabase } from "./db";
 import { DexieWorkoutRepository } from "./workoutRepository";
 
@@ -45,6 +51,38 @@ describe("DexieWorkoutRepository", () => {
     await expect(repository.saveDraft(validDraft("2026-08-19T18:30:00+02:00"))).rejects.toThrow(
       "Ya existe un entrenamiento activo",
     );
+  });
+
+  it("replaces the active draft key when its date changes", async () => {
+    const draft = validDraft("2026-08-26T18:30:00+02:00");
+    await repository.saveDraft(draft);
+    const changed = changeWorkoutDate(draft, "2026-08-20");
+
+    await repository.replaceDraft(draft.id, changed);
+
+    expect(await repository.getById("20260826")).toBeUndefined();
+    expect(await repository.getActive()).toMatchObject({
+      id: "20260820",
+      date: "2026-08-20",
+      startedAt: "2026-08-26T18:30:00+02:00",
+    });
+  });
+
+  it("does not overwrite a finalized workout when changing the draft date", async () => {
+    const draft = validDraft("2026-08-26T18:30:00+02:00");
+    const finalized = {
+      ...validDraft("2026-08-20T18:30:00+02:00"),
+      status: "finalized" as const,
+      finishedAt: "2026-08-20T19:30:00+02:00",
+    };
+    await db.workouts.bulkPut([draft, finalized]);
+
+    await expect(
+      repository.replaceDraft(draft.id, changeWorkoutDate(draft, "2026-08-20")),
+    ).rejects.toThrow("Ya existe un entrenamiento para esta fecha");
+
+    expect(await repository.getById(draft.id)).toEqual(draft);
+    expect(await repository.getById(finalized.id)).toEqual(finalized);
   });
 
   it("finalizes the workout and enqueues its Markdown atomically", async () => {

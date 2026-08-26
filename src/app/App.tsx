@@ -3,7 +3,7 @@ import { HashRouter, Navigate, Route, Routes, useNavigate } from "react-router-d
 import { loadCatalog } from "../catalog/loadCatalog";
 import type { CatalogExercise } from "../catalog/types";
 import type { Workout } from "../domain/types";
-import { addExercise, createWorkout } from "../domain/workout";
+import { addExercise, changeWorkoutDate, createWorkout } from "../domain/workout";
 import { toMadridIso } from "../domain/time";
 import { findLastValues } from "../domain/lastValues";
 import { ExercisePicker } from "../features/catalog/ExercisePicker";
@@ -127,16 +127,16 @@ const AppRoutes = () => {
     };
   }, [runSync]);
 
-  const startWorkout = async () => {
+  const startWorkout = async (selectedDate: string) => {
     if (activeWorkout) {
       navigate("/entrenamiento");
       return;
     }
     const now = toMadridIso();
-    const workout = createWorkout(now);
+    const workout = createWorkout(now, selectedDate);
     const existing = await workoutRepository.getById(workout.id);
     if (existing?.status === "finalized") {
-      setToast("Ya existe un entrenamiento finalizado para hoy");
+      setToast("Ya existe un entrenamiento para esta fecha");
       return;
     }
     await workoutRepository.saveDraft(workout);
@@ -149,6 +149,13 @@ const AppRoutes = () => {
     void workoutRepository
       .saveDraft(workout)
       .catch(() => setToast("No se pudo guardar el último cambio"));
+  };
+
+  const changeActiveWorkoutDate = async (selectedDate: string) => {
+    if (!activeWorkout || selectedDate === activeWorkout.date) return;
+    const changed = changeWorkoutDate(activeWorkout, selectedDate);
+    await workoutRepository.replaceDraft(activeWorkout.id, changed);
+    setActiveWorkout(changed);
   };
 
   const openExercisePicker = async () => {
@@ -249,7 +256,7 @@ const AppRoutes = () => {
             <HomePage
               activeWorkout={activeWorkout}
               recentWorkouts={history}
-              onStart={() => void startWorkout()}
+              onStart={(selectedDate) => void startWorkout(selectedDate)}
               onSync={runSync}
             />
           }
@@ -262,6 +269,7 @@ const AppRoutes = () => {
                 workout={activeWorkout}
                 elapsedMinutes={elapsedMinutes}
                 onWorkoutChange={saveWorkout}
+                onDateChange={changeActiveWorkoutDate}
                 onAddExercise={() => void openExercisePicker()}
                 onRequestFinish={() => setFinishOpen(true)}
               />

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { ArrowRight, Check, CloudOff, Dumbbell, RefreshCw } from "lucide-react";
+import { toMadridIso } from "../../domain/time";
 import type { Workout } from "../../domain/types";
 import { calculateWorkoutSummary } from "../../domain/workout";
 
 interface HomePageProps {
   activeWorkout?: Workout;
   recentWorkouts: Workout[];
-  onStart: () => void;
+  onStart: (selectedDate: string) => void;
   onSync: () => Promise<string>;
 }
 
@@ -18,6 +19,7 @@ const syncCopy = (workout: Workout) => {
 };
 
 export const HomePage = ({ activeWorkout, recentWorkouts, onStart, onSync }: HomePageProps) => {
+  const [selectedDate, setSelectedDate] = useState(() => toMadridIso().slice(0, 10));
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
   const allSynced =
@@ -60,10 +62,27 @@ export const HomePage = ({ activeWorkout, recentWorkouts, onStart, onSync }: Hom
               : "Peso, repeticiones y series disponibles incluso sin conexión."}
           </p>
         </div>
-        <button className="button button-primary button-large" onClick={onStart}>
-          {activeWorkout ? "Continuar entrenamiento" : "Comenzar entrenamiento"}
-          <ArrowRight aria-hidden="true" />
-        </button>
+        <div className="start-actions">
+          {!activeWorkout && (
+            <label className="start-date-field">
+              <span>Fecha del entrenamiento</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(event.target.value)}
+                required
+              />
+            </label>
+          )}
+          <button
+            className="button button-primary button-large"
+            onClick={() => onStart(selectedDate)}
+            disabled={!activeWorkout && selectedDate === ""}
+          >
+            {activeWorkout ? "Continuar entrenamiento" : "Comenzar entrenamiento"}
+            <ArrowRight aria-hidden="true" />
+          </button>
+        </div>
       </section>
 
       <section className="recent-section" aria-labelledby="recent-title">

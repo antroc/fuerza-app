@@ -3,6 +3,7 @@ import {
   addExercise,
   addSet,
   calculateWorkoutSummary,
+  changeWorkoutDate,
   completeSet,
   createWorkout,
   duplicateSet,
@@ -23,6 +24,24 @@ const catalogExercise = {
 };
 
 describe("workout domain", () => {
+  it("creates a workout for a selected date without changing its real start time", () => {
+    expect(createWorkout("2026-08-26T18:30:00+02:00", "2026-08-20")).toMatchObject({
+      id: "20260820",
+      date: "2026-08-20",
+      startedAt: "2026-08-26T18:30:00+02:00",
+    });
+  });
+
+  it("changes the logical date of an active workout", () => {
+    expect(
+      changeWorkoutDate(createWorkout("2026-08-26T18:30:00+02:00"), "2026-08-20"),
+    ).toMatchObject({
+      id: "20260820",
+      date: "2026-08-20",
+      startedAt: "2026-08-26T18:30:00+02:00",
+    });
+  });
+
   it("stores decimal kilograms as exact integer grams", () => {
     expect(kgToGrams("22,5")).toBe(22_500);
     expect(kgToGrams("0")).toBe(0);

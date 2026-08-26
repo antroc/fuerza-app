@@ -292,6 +292,27 @@ svg {
 .start-panel .button-primary {
   background: var(--primary);
 }
+.start-actions {
+  display: grid;
+  gap: var(--space-md);
+}
+.start-date-field {
+  display: grid;
+  gap: var(--space-xs);
+  color: oklch(0.84 0.015 255);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.start-date-field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.6rem var(--space-md);
+  border: 1px solid oklch(0.55 0.02 255);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: white;
+  color-scheme: light;
+}
 
 .recent-section {
   margin-top: var(--space-3xl);
@@ -424,6 +445,25 @@ svg {
 .workout-header h1 {
   font-size: 1.45rem;
   margin-top: var(--space-xs);
+}
+.workout-date-field {
+  display: grid;
+  gap: 0.15rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+.workout-date-field input {
+  width: 10.5rem;
+  min-height: 44px;
+  padding: 0.45rem var(--space-sm);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: var(--surface);
+  font-size: 0.9rem;
+  font-weight: 650;
+  color-scheme: light;
 }
 .workout-clock {
   color: var(--primary);
@@ -1209,6 +1249,9 @@ svg {
   }
   .start-panel .button-large {
     width: auto;
+    min-width: 15rem;
+  }
+  .start-actions {
     min-width: 15rem;
   }
   .recent-list article {

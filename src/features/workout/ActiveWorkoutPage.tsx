@@ -18,6 +18,7 @@ interface ActiveWorkoutPageProps {
   workout: Workout;
   elapsedMinutes: number;
   onWorkoutChange: (workout: Workout) => void;
+  onDateChange: (selectedDate: string) => Promise<void>;
   onAddExercise: () => void;
   onRequestFinish: (workout: Workout) => void;
 }
@@ -51,11 +52,14 @@ export const ActiveWorkoutPage = ({
   workout,
   elapsedMinutes,
   onWorkoutChange,
+  onDateChange,
   onAddExercise,
   onRequestFinish,
 }: ActiveWorkoutPageProps) => {
   const [error, setError] = useState<string | null>(null);
   const [openActions, setOpenActions] = useState<string | null>(null);
+  const [dateDraft, setDateDraft] = useState(workout.date);
+  useEffect(() => setDateDraft(workout.date), [workout.date]);
   const hours = Math.floor(elapsedMinutes / 60);
   const minutes = elapsedMinutes % 60;
   const elapsed = hours > 0 ? `${hours}:${minutes.toString().padStart(2, "0")}` : `${minutes} min`;
@@ -82,12 +86,30 @@ export const ActiveWorkoutPage = ({
     <main className="workout-page" aria-labelledby="workout-title">
       <header className="workout-header">
         <div>
-          <p className="workout-date">
-            {new Intl.DateTimeFormat("es-ES", { dateStyle: "long" }).format(
-              new Date(workout.startedAt),
-            )}
-          </p>
-          <h1 id="workout-title">Entrenamiento de hoy</h1>
+          <label className="workout-date-field">
+            <span>Fecha del entrenamiento</span>
+            <input
+              type="date"
+              value={dateDraft}
+              onChange={(event) => {
+                const selectedDate = event.target.value;
+                setDateDraft(selectedDate);
+                if (!selectedDate) return;
+                void onDateChange(selectedDate)
+                  .then(() => setError(null))
+                  .catch((reason) => {
+                    setDateDraft(workout.date);
+                    setError(
+                      reason instanceof Error
+                        ? reason.message
+                        : "No se pudo cambiar la fecha del entrenamiento",
+                    );
+                  });
+              }}
+              required
+            />
+          </label>
+          <h1 id="workout-title">Entrenamiento</h1>
         </div>
         <div className="workout-clock" aria-label={`Duración ${elapsed}`}>
           {elapsed}

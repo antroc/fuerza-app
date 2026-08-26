@@ -26,6 +26,40 @@ const finalized = {
 };
 
 describe("application pages", () => {
+  it("starts a workout on the date selected on the home page", async () => {
+    const onStart = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <HomePage
+        recentWorkouts={[]}
+        onStart={onStart}
+        onSync={async () => "Sincronización completada"}
+      />,
+    );
+
+    const dateInput = screen.getByLabelText("Fecha del entrenamiento");
+    await user.clear(dateInput);
+    await user.type(dateInput, "2026-08-20");
+    await user.click(screen.getByRole("button", { name: "Comenzar entrenamiento" }));
+
+    expect(onStart).toHaveBeenCalledWith("2026-08-20");
+  });
+
+  it("requires a date before starting a workout", async () => {
+    const user = userEvent.setup();
+    render(
+      <HomePage
+        recentWorkouts={[]}
+        onStart={() => undefined}
+        onSync={async () => "Sincronización completada"}
+      />,
+    );
+
+    await user.clear(screen.getByLabelText("Fecha del entrenamiento"));
+
+    expect(screen.getByRole("button", { name: "Comenzar entrenamiento" })).toBeDisabled();
+  });
+
   it("offers to continue an active workout instead of creating another", async () => {
     const onStart = vi.fn();
     render(

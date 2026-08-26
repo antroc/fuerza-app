@@ -13,13 +13,20 @@ const draft = addExercise(createWorkout("2026-08-18T18:30:00+02:00"), {
   equipment: "barbell",
 });
 
-const Harness = ({ onFinish = vi.fn() }: { onFinish?: (workout: Workout) => void }) => {
+const Harness = ({
+  onFinish = vi.fn(),
+  onDateChange = async () => undefined,
+}: {
+  onFinish?: (workout: Workout) => void;
+  onDateChange?: (selectedDate: string) => Promise<void>;
+}) => {
   const [workout, setWorkout] = useState(draft);
   return (
     <ActiveWorkoutPage
       workout={workout}
       elapsedMinutes={42}
       onWorkoutChange={setWorkout}
+      onDateChange={onDateChange}
       onAddExercise={() => undefined}
       onRequestFinish={onFinish}
     />
@@ -27,6 +34,19 @@ const Harness = ({ onFinish = vi.fn() }: { onFinish?: (workout: Workout) => void
 };
 
 describe("ActiveWorkoutPage", () => {
+  it("allows changing the workout date without altering the elapsed time", async () => {
+    const onDateChange = vi.fn(async () => undefined);
+    const user = userEvent.setup();
+    render(<Harness onDateChange={onDateChange} />);
+
+    const dateInput = screen.getByLabelText("Fecha del entrenamiento");
+    await user.clear(dateInput);
+    await user.type(dateInput, "2026-08-20");
+
+    expect(onDateChange).toHaveBeenCalledWith("2026-08-20");
+    expect(screen.getByText("42 min")).toBeVisible();
+  });
+
   it("keeps each set editable and copies previous values into a new set", async () => {
     const user = userEvent.setup();
     render(<Harness />);

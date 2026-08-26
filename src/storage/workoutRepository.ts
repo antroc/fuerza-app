@@ -7,6 +7,7 @@ export interface WorkoutRepository {
   getActive(): Promise<Workout | undefined>;
   getById(id: string): Promise<Workout | undefined>;
   saveDraft(workout: Workout): Promise<void>;
+  replaceDraft(previousId: string, workout: Workout): Promise<void>;
   finalizeAndEnqueue(id: string, finishedAt: string): Promise<Workout>;
   listFinalized(): Promise<Workout[]>;
   putImported(workout: Workout): Promise<void>;
@@ -30,6 +31,21 @@ export class DexieWorkoutRepository implements WorkoutRepository {
       throw new Error("Ya existe un entrenamiento activo");
     }
     await this.database.workouts.put(workout);
+  }
+
+  async replaceDraft(previousId: string, workout: Workout): Promise<void> {
+    if (workout.status !== "draft") throw new Error("La sesión no es un borrador");
+    await this.database.transaction("rw", this.database.workouts, async () => {
+      const current = await this.database.workouts.get(previousId);
+      if (!current || current.status !== "draft") {
+        throw new Error("Entrenamiento activo no encontrado");
+      }
+      if (workout.id !== previousId && (await this.database.workouts.get(workout.id))) {
+        throw new Error("Ya existe un entrenamiento para esta fecha");
+      }
+      await this.database.workouts.put(workout);
+      if (workout.id !== previousId) await this.database.workouts.delete(previousId);
+    });
   }
 
   async finalizeAndEnqueue(id: string, finishedAt: string): Promise<Workout> {
