@@ -2,7 +2,8 @@ import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const maximumEntryBytes = 550 * 1024;
-const indexPath = resolve("dist/index.html");
+const buildDirectory = resolve(process.argv[2] ?? "dist");
+const indexPath = resolve(buildDirectory, "index.html");
 const indexHtml = await readFile(indexPath, "utf8");
 const entryMatch = indexHtml.match(/<script[^>]+type="module"[^>]+src="([^"]+\.js)"/);
 
@@ -14,8 +15,13 @@ const assetPath = entryMatch[1].match(/assets\/[^/]+\.js$/)?.[0];
 if (!assetPath) {
   throw new Error(`Ruta de entrada inesperada: ${entryMatch[1]}`);
 }
-const entryPath = resolve("dist", assetPath);
+const entryPath = resolve(buildDirectory, assetPath);
 const { size } = await stat(entryPath);
+const entryJavaScript = await readFile(entryPath, "utf8");
+
+if (entryJavaScript.includes("/fuerza-app/__github")) {
+  throw new Error("El bundle de producción apunta a la API simulada de GitHub");
+}
 
 if (size > maximumEntryBytes) {
   throw new Error(

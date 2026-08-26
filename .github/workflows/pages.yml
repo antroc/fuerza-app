@@ -30,6 +30,7 @@ jobs:
       - run: npm test
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:e2e
+      - run: npm run build
       - run: npm run check:build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
