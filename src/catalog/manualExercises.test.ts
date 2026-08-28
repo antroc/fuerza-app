@@ -21,4 +21,25 @@ describe("manual exercise catalog", () => {
       }),
     ]);
   });
+
+  it("includes the searchable bilateral lever horizontal leg press in Legs", () => {
+    expect(
+      filterExercises(manualExercises, {
+        query: "lever horizontal leg press",
+        category: "Piernas",
+        favorites: new Set(),
+        limit: 10,
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        id: "manual-lever-horizontal-leg-press",
+        name: "lever horizontal leg press",
+        category: "Piernas",
+        equipment: "leverage machine",
+        target: "quads",
+        imageUrl: "/fuerza-app/exercises/lever-horizontal-leg-press.png",
+        gifUrl: "",
+      }),
+    ]);
+  });
 });

@@ -35,4 +35,28 @@ describe("check-build", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("API simulada de GitHub");
   });
+
+  it("rejects a build that omits the bilateral leg press image from the offline cache", async () => {
+    const buildDirectory = await mkdtemp(join(tmpdir(), "fuerza-build-"));
+    temporaryDirectories.push(buildDirectory);
+    await mkdir(join(buildDirectory, "assets"));
+    await writeFile(
+      join(buildDirectory, "index.html"),
+      '<script type="module" src="/fuerza-app/assets/index.js"></script>',
+    );
+    await writeFile(join(buildDirectory, "assets/index.js"), "const ready = true;");
+    await writeFile(
+      join(buildDirectory, "sw.js"),
+      'precacheAndRoute([{url:"exercises/plank.png"}]);',
+    );
+
+    const result = spawnSync(
+      process.execPath,
+      [resolve("scripts/check-build.mjs"), buildDirectory],
+      { encoding: "utf8" },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("exercises/lever-horizontal-leg-press.png");
+  });
 });

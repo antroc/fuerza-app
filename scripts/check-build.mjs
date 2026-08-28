@@ -16,6 +16,7 @@ if (!assetPath) {
   throw new Error(`Ruta de entrada inesperada: ${entryMatch[1]}`);
 }
 const entryPath = resolve(buildDirectory, assetPath);
+const serviceWorkerPath = resolve(buildDirectory, "sw.js");
 const { size } = await stat(entryPath);
 const entryJavaScript = await readFile(entryPath, "utf8");
 
@@ -27,6 +28,13 @@ if (size > maximumEntryBytes) {
   throw new Error(
     `El JavaScript inicial pesa ${Math.ceil(size / 1024)} KiB; el máximo es ${maximumEntryBytes / 1024} KiB`,
   );
+}
+
+const serviceWorker = await readFile(serviceWorkerPath, "utf8");
+const requiredOfflineAssets = ["exercises/plank.png", "exercises/lever-horizontal-leg-press.png"];
+const missingOfflineAsset = requiredOfflineAssets.find((asset) => !serviceWorker.includes(asset));
+if (missingOfflineAsset) {
+  throw new Error(`Falta un ejercicio manual en la precaché offline: ${missingOfflineAsset}`);
 }
 
 console.log(`JavaScript inicial: ${Math.ceil(size / 1024)} KiB`);
