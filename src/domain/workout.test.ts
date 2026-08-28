@@ -13,6 +13,7 @@ import {
   moveExercise,
   removeExercise,
   removeSet,
+  resetWorkout,
   updateSet,
 } from "./workout";
 
@@ -39,6 +40,28 @@ describe("workout domain", () => {
       id: "20260820",
       date: "2026-08-20",
       startedAt: "2026-08-26T18:30:00+02:00",
+    });
+  });
+
+  it("resets every value in the active workout while preserving its selected date", () => {
+    const workout = addExercise(
+      createWorkout("2026-08-26T18:30:00+02:00", "2026-08-20"),
+      catalogExercise,
+    );
+
+    expect(resetWorkout(workout, "2026-08-26T19:15:00+02:00")).toEqual({
+      id: "20260820",
+      date: "2026-08-20",
+      startedAt: "2026-08-26T19:15:00+02:00",
+      finishedAt: null,
+      durationMinutes: null,
+      timezone: "Europe/Madrid",
+      status: "draft",
+      syncStatus: "local",
+      exercises: [],
+      githubCommitSha: null,
+      githubContentSha: null,
+      updatedAt: "2026-08-26T19:15:00+02:00",
     });
   });
 

@@ -15,9 +15,11 @@ const draft = addExercise(createWorkout("2026-08-18T18:30:00+02:00"), {
 
 const Harness = ({
   onFinish = vi.fn(),
+  onReset = vi.fn(),
   onDateChange = async () => undefined,
 }: {
   onFinish?: (workout: Workout) => void;
+  onReset?: () => void;
   onDateChange?: (selectedDate: string) => Promise<void>;
 }) => {
   const [workout, setWorkout] = useState(draft);
@@ -29,6 +31,7 @@ const Harness = ({
       onDateChange={onDateChange}
       onAddExercise={() => undefined}
       onRequestFinish={onFinish}
+      onRequestReset={onReset}
     />
   );
 };
@@ -82,5 +85,14 @@ describe("ActiveWorkoutPage", () => {
     expect(screen.getByText("Completada")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Finalizar entrenamiento" }));
     expect(onFinish).toHaveBeenCalledOnce();
+  });
+
+  it("requests confirmation before resetting the active workout", async () => {
+    const onReset = vi.fn();
+    render(<Harness onReset={onReset} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Reiniciar sesión" }));
+
+    expect(onReset).toHaveBeenCalledOnce();
   });
 });

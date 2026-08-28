@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, Check, Copy, Ellipsis, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Copy, Ellipsis, Plus, RotateCcw, Trash2 } from "lucide-react";
 import type { Workout, WorkoutSet } from "../../domain/types";
 import {
   addSet,
@@ -20,6 +20,7 @@ interface ActiveWorkoutPageProps {
   onWorkoutChange: (workout: Workout) => void;
   onDateChange: (selectedDate: string) => Promise<void>;
   onAddExercise: () => void;
+  onRequestReset: () => void;
   onRequestFinish: (workout: Workout) => void;
 }
 
@@ -54,6 +55,7 @@ export const ActiveWorkoutPage = ({
   onWorkoutChange,
   onDateChange,
   onAddExercise,
+  onRequestReset,
   onRequestFinish,
 }: ActiveWorkoutPageProps) => {
   const [error, setError] = useState<string | null>(null);
@@ -111,8 +113,13 @@ export const ActiveWorkoutPage = ({
           </label>
           <h1 id="workout-title">Entrenamiento</h1>
         </div>
-        <div className="workout-clock" aria-label={`Duración ${elapsed}`}>
-          {elapsed}
+        <div className="workout-header-actions">
+          <div className="workout-clock" aria-label={`Duración ${elapsed}`}>
+            {elapsed}
+          </div>
+          <button className="text-button reset-workout-button" onClick={onRequestReset}>
+            <RotateCcw size={17} aria-hidden="true" /> Reiniciar sesión
+          </button>
         </div>
       </header>
 

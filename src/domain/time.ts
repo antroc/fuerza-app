@@ -6,6 +6,7 @@ const formatter = new Intl.DateTimeFormat("en-CA", {
   hour: "2-digit",
   minute: "2-digit",
   second: "2-digit",
+  fractionalSecondDigits: 3,
   hourCycle: "h23",
 });
 
@@ -30,5 +31,5 @@ export const toMadridIso = (date = new Date()): string => {
   const offset = `${sign}${Math.floor(absoluteOffset / 60)
     .toString()
     .padStart(2, "0")}:${(absoluteOffset % 60).toString().padStart(2, "0")}`;
-  return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}:${values.second}${offset}`;
+  return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}:${values.second}.${values.fractionalSecond}${offset}`;
 };

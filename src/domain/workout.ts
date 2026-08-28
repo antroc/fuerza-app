@@ -83,6 +83,9 @@ export const createWorkout = (
   };
 };
 
+export const resetWorkout = (workout: Workout, restartedAt: string): Workout =>
+  createWorkout(restartedAt, workout.date);
+
 export const changeWorkoutDate = (workout: Workout, selectedDate: string): Workout => {
   if (workout.status !== "draft") throw new Error("La sesión ya está finalizada");
   return touch({

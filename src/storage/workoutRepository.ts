@@ -1,5 +1,5 @@
 import type { Workout } from "../domain/types";
-import { finalizeWorkout } from "../domain/workout";
+import { finalizeWorkout, resetWorkout } from "../domain/workout";
 import { renderWorkoutMarkdown, workoutFileName } from "../export/markdown";
 import type { FuerzaDatabase, SyncQueueItem } from "./db";
 
@@ -8,6 +8,7 @@ export interface WorkoutRepository {
   getById(id: string): Promise<Workout | undefined>;
   saveDraft(workout: Workout): Promise<void>;
   replaceDraft(previousId: string, workout: Workout): Promise<void>;
+  resetDraft(id: string, restartedAt: string): Promise<Workout>;
   finalizeAndEnqueue(id: string, finishedAt: string): Promise<Workout>;
   listFinalized(): Promise<Workout[]>;
   putImported(workout: Workout): Promise<void>;
@@ -26,11 +27,14 @@ export class DexieWorkoutRepository implements WorkoutRepository {
 
   async saveDraft(workout: Workout): Promise<void> {
     if (workout.status !== "draft") throw new Error("La sesión no es un borrador");
-    const active = await this.getActive();
-    if (active && active.id !== workout.id) {
-      throw new Error("Ya existe un entrenamiento activo");
-    }
-    await this.database.workouts.put(workout);
+    await this.database.transaction("rw", this.database.workouts, async () => {
+      const active = await this.getActive();
+      if (active && active.id !== workout.id) {
+        throw new Error("Ya existe un entrenamiento activo");
+      }
+      if (active && Date.parse(active.startedAt) > Date.parse(workout.startedAt)) return;
+      await this.database.workouts.put(workout);
+    });
   }
 
   async replaceDraft(previousId: string, workout: Workout): Promise<void> {
@@ -45,6 +49,18 @@ export class DexieWorkoutRepository implements WorkoutRepository {
       }
       await this.database.workouts.put(workout);
       if (workout.id !== previousId) await this.database.workouts.delete(previousId);
+    });
+  }
+
+  async resetDraft(id: string, restartedAt: string): Promise<Workout> {
+    return this.database.transaction("rw", this.database.workouts, async () => {
+      const current = await this.database.workouts.get(id);
+      if (!current || current.status !== "draft") {
+        throw new Error("Entrenamiento activo no encontrado");
+      }
+      const reset = resetWorkout(current, restartedAt);
+      await this.database.workouts.put(reset);
+      return reset;
     });
   }
 

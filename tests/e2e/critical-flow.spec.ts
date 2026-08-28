@@ -20,7 +20,12 @@ const fillSet = async (
 const activeWorkoutInStorage = (page: Page) =>
   page.evaluate(
     () =>
-      new Promise<{ date: string | null; completedSets: number }>((resolve, reject) => {
+      new Promise<{
+        date: string | null;
+        startedAt: string | null;
+        exerciseCount: number;
+        completedSets: number;
+      }>((resolve, reject) => {
         const openRequest = indexedDB.open("fuerza-app");
         openRequest.onerror = () => reject(openRequest.error);
         openRequest.onsuccess = () => {
@@ -33,6 +38,7 @@ const activeWorkoutInStorage = (page: Page) =>
           getRequest.onsuccess = () => {
             const workouts = getRequest.result as Array<{
               date: string;
+              startedAt: string;
               status: string;
               exercises: Array<{ sets: Array<{ completed: boolean }> }>;
             }>;
@@ -40,6 +46,8 @@ const activeWorkoutInStorage = (page: Page) =>
             database.close();
             resolve({
               date: active?.date ?? null,
+              startedAt: active?.startedAt ?? null,
+              exerciseCount: active?.exercises.length ?? 0,
               completedSets:
                 active?.exercises.reduce(
                   (total, exercise) => total + exercise.sets.filter((set) => set.completed).length,
@@ -112,4 +120,33 @@ test("conserva una sesión offline y sincroniza el Markdown al recuperar la red"
   const uploadedMarkdown = await readUploadedMarkdown();
   expect(uploadedMarkdown).toContain("## 3/4 sit-up");
   expect(uploadedMarkdown).toContain("## alternate lateral pulldown");
+});
+
+test("reinicia y persiste vacía la sesión activa", async ({ page }) => {
+  await page.goto("./");
+  await page.getByLabel("Fecha del entrenamiento").fill("2026-08-21");
+  await page.getByRole("button", { name: "Comenzar entrenamiento" }).click();
+  await page.getByRole("button", { name: "Añadir ejercicio" }).click();
+  await page.getByRole("searchbox", { name: "Buscar ejercicio" }).fill("3/4 sit-up");
+  await page.getByRole("button", { name: "Añadir 3/4 sit-up", exact: true }).click();
+  await fillSet(page, "3/4 sit-up", 0, "20", "10");
+  const beforeReset = await activeWorkoutInStorage(page);
+
+  await page.getByRole("button", { name: "Reiniciar sesión" }).click();
+  await expect(page.getByRole("button", { name: "Seguir entrenando" })).toBeFocused();
+  await page.getByRole("button", { name: "Confirmar reinicio" }).click();
+
+  await expect(page.getByText("Sesión reiniciada")).toBeVisible();
+  await expect(page.getByLabel("Fecha del entrenamiento")).toHaveValue("2026-08-21");
+  await expect(page.getByLabel("Duración 0 min")).toBeVisible();
+  await expect(page.getByRole("region", { name: "3/4 sit-up" })).toHaveCount(0);
+  await expect.poll(async () => (await activeWorkoutInStorage(page)).exerciseCount).toBe(0);
+  await expect
+    .poll(async () => (await activeWorkoutInStorage(page)).startedAt)
+    .not.toBe(beforeReset.startedAt);
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Entrenamiento", exact: true })).toBeVisible();
+  await expect(page.getByLabel("Fecha del entrenamiento")).toHaveValue("2026-08-21");
+  await expect(page.getByRole("region", { name: "3/4 sit-up" })).toHaveCount(0);
 });

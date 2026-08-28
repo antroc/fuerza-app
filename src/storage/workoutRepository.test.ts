@@ -68,6 +68,31 @@ describe("DexieWorkoutRepository", () => {
     });
   });
 
+  it("persists a completely reset draft with a fresh start time", async () => {
+    const draft = validDraft("2026-08-26T18:30:00+02:00");
+    await repository.saveDraft(draft);
+
+    const reset = await repository.resetDraft(draft.id, "2026-08-26T19:15:00+02:00");
+
+    expect(reset).toMatchObject({
+      id: draft.id,
+      date: draft.date,
+      startedAt: "2026-08-26T19:15:00+02:00",
+      exercises: [],
+    });
+    expect(await repository.getActive()).toEqual(reset);
+  });
+
+  it("ignores an autosave older than a completed reset", async () => {
+    const staleDraft = validDraft("2026-08-26T18:30:00+02:00");
+    await repository.saveDraft(staleDraft);
+    const reset = await repository.resetDraft(staleDraft.id, "2026-08-26T19:15:00+02:00");
+
+    await repository.saveDraft(staleDraft);
+
+    expect(await repository.getActive()).toEqual(reset);
+  });
+
   it("does not overwrite a finalized workout when changing the draft date", async () => {
     const draft = validDraft("2026-08-26T18:30:00+02:00");
     const finalized = {

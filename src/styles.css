@@ -260,6 +260,9 @@ svg {
   border-color: oklch(0.83 0.08 25);
   background: white;
 }
+.button-danger:hover:not(:disabled) {
+  background: oklch(0.97 0.025 25);
+}
 .button-large {
   min-height: 3.5rem;
   width: 100%;
@@ -470,6 +473,15 @@ svg {
   font-size: 1.5rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+}
+.workout-header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.reset-workout-button {
+  color: var(--danger);
+  font-size: 0.8rem;
 }
 .local-status {
   display: flex;
@@ -1075,9 +1087,13 @@ svg {
 .finish-dialog {
   width: min(100%, 28rem);
   padding: var(--space-xl);
+  border: 0;
   background: white;
   border-radius: var(--radius-md);
   text-align: center;
+}
+dialog.finish-dialog::backdrop {
+  background: oklch(0.1 0.01 255 / 0.5);
 }
 .conflict-dialog {
   width: min(100%, 64rem);
@@ -1144,6 +1160,9 @@ svg {
   margin: var(--space-sm) auto var(--space-xl);
   max-width: 36ch;
 }
+.reset-dialog .dialog-icon {
+  background: var(--danger);
+}
 .finish-summary {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1163,7 +1182,8 @@ svg {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
-.dialog-warning {
+.dialog-warning,
+.dialog-error {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -1173,6 +1193,9 @@ svg {
   text-align: left;
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
+}
+.dialog-error {
+  margin-top: var(--space-sm);
 }
 .dialog-actions {
   display: grid;

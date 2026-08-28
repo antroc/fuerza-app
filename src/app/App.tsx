@@ -13,6 +13,7 @@ import { HomePage } from "../features/home/HomePage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { ActiveWorkoutPage } from "../features/workout/ActiveWorkoutPage";
 import { FinishDialog } from "../features/workout/FinishDialog";
+import { ResetWorkoutDialog } from "../features/workout/ResetWorkoutDialog";
 import { FavoritesRepository, syncFavorites } from "../favorites/mergeFavorites";
 import { db } from "../storage/db";
 import { SettingsRepository, type GitHubSettings } from "../storage/settingsRepository";
@@ -44,6 +45,9 @@ const AppRoutes = () => {
   const [pendingOperations, setPendingOperations] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetPending, setResetPending] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<{
     workoutId: string;
     localContent: string;
@@ -182,6 +186,23 @@ const AppRoutes = () => {
     }
   };
 
+  const confirmReset = async () => {
+    if (!activeWorkout || resetPending) return;
+    setResetPending(true);
+    setResetError(null);
+    try {
+      const reset = await workoutRepository.resetDraft(activeWorkout.id, toMadridIso());
+      setResetOpen(false);
+      setActiveWorkout(reset);
+      setElapsedMinutes(0);
+      setToast("Sesión reiniciada");
+    } catch (error) {
+      setResetError(error instanceof Error ? error.message : "No se pudo reiniciar la sesión");
+    } finally {
+      setResetPending(false);
+    }
+  };
+
   const connect = async (input: { owner: string; repository: string; token: string }) => {
     const verifiedAt = toMadridIso();
     const client = new GitHubClient(input.token);
@@ -271,6 +292,10 @@ const AppRoutes = () => {
                 onWorkoutChange={saveWorkout}
                 onDateChange={changeActiveWorkoutDate}
                 onAddExercise={() => void openExercisePicker()}
+                onRequestReset={() => {
+                  setResetError(null);
+                  setResetOpen(true);
+                }}
                 onRequestFinish={() => setFinishOpen(true)}
               />
             ) : (
@@ -326,6 +351,17 @@ const AppRoutes = () => {
           workout={activeWorkout}
           onCancel={() => setFinishOpen(false)}
           onConfirm={() => void confirmFinish()}
+        />
+      )}
+      {resetOpen && activeWorkout && (
+        <ResetWorkoutDialog
+          error={resetError}
+          pending={resetPending}
+          onCancel={() => {
+            setResetError(null);
+            setResetOpen(false);
+          }}
+          onConfirm={() => void confirmReset()}
         />
       )}
       {conflict && (
