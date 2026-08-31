@@ -79,6 +79,7 @@ describe("workout domain", () => {
     workout = updateSet(workout, exerciseId, firstSetId, {
       weightGrams: 60_000,
       repetitions: 10,
+      durationSeconds: 75,
     });
     workout = addSet(workout, exerciseId);
 
@@ -86,6 +87,7 @@ describe("workout domain", () => {
       position: 2,
       weightGrams: 60_000,
       repetitions: 10,
+      durationSeconds: 75,
       completed: false,
     });
   });
@@ -94,22 +96,42 @@ describe("workout domain", () => {
     const workout = addExercise(createWorkout("2026-08-18T18:30:00+02:00"), catalogExercise, {
       weightGrams: 72_500,
       repetitions: 6,
+      durationSeconds: 45,
     });
 
     expect(workout.exercises[0].sets[0]).toMatchObject({
       weightGrams: 72_500,
       repetitions: 6,
+      durationSeconds: 45,
       completed: false,
     });
   });
 
-  it("rejects completion until weight and repetitions are valid", () => {
+  it("rejects completion until weight and repetitions or duration are valid", () => {
     const workout = addExercise(createWorkout("2026-08-18T18:30:00+02:00"), catalogExercise);
     const exercise = workout.exercises[0];
 
     expect(() => completeSet(workout, exercise.id, exercise.sets[0].id)).toThrow(
-      "Introduce un peso y repeticiones válidos",
+      "Introduce un peso y repeticiones o duración válidos",
     );
+  });
+
+  it("completes a timed set without repetitions", () => {
+    let workout = addExercise(createWorkout("2026-08-18T18:30:00+02:00"), catalogExercise);
+    const exercise = workout.exercises[0];
+    workout = updateSet(workout, exercise.id, exercise.sets[0].id, {
+      weightGrams: 0,
+      repetitions: null,
+      durationSeconds: 90,
+    });
+
+    workout = completeSet(workout, exercise.id, exercise.sets[0].id);
+
+    expect(workout.exercises[0].sets[0]).toMatchObject({
+      repetitions: null,
+      durationSeconds: 90,
+      completed: true,
+    });
   });
 
   it("duplicates, moves and removes sets while renumbering positions", () => {
@@ -119,6 +141,7 @@ describe("workout domain", () => {
     workout = updateSet(workout, exerciseId, firstSetId, {
       weightGrams: 62_500,
       repetitions: 8,
+      durationSeconds: 60,
     });
     workout = duplicateSet(workout, exerciseId, firstSetId);
     workout = addSet(workout, exerciseId);
@@ -130,6 +153,7 @@ describe("workout domain", () => {
     expect(workout.exercises[0].sets[1]).toMatchObject({
       weightGrams: 62_500,
       repetitions: 8,
+      durationSeconds: 60,
     });
   });
 

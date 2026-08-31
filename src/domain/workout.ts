@@ -97,19 +97,20 @@ export const changeWorkoutDate = (workout: Workout, selectedDate: string): Worko
 
 const emptySet = (
   position: number,
-  previous?: Pick<WorkoutSet, "weightGrams" | "repetitions">,
+  previous?: Pick<WorkoutSet, "weightGrams" | "repetitions" | "durationSeconds">,
 ): WorkoutSet => ({
   id: uuid(),
   position,
   weightGrams: previous?.weightGrams ?? null,
   repetitions: previous?.repetitions ?? null,
+  durationSeconds: previous?.durationSeconds ?? null,
   completed: false,
 });
 
 export const addExercise = (
   workout: Workout,
   catalog: CatalogExerciseSnapshot,
-  lastValues?: Pick<WorkoutSet, "weightGrams" | "repetitions">,
+  lastValues?: Pick<WorkoutSet, "weightGrams" | "repetitions" | "durationSeconds">,
 ): Workout => {
   if (workout.status !== "draft") throw new Error("La sesión ya está finalizada");
   const exercise: PerformedExercise = {
@@ -152,7 +153,7 @@ export const updateSet = (
   workout: Workout,
   exerciseId: string,
   setId: string,
-  patch: Pick<WorkoutSet, "weightGrams" | "repetitions">,
+  patch: Pick<WorkoutSet, "weightGrams" | "repetitions" | "durationSeconds">,
 ): Workout => {
   if (
     patch.weightGrams !== null &&
@@ -166,17 +167,30 @@ export const updateSet = (
   ) {
     throw new Error("Introduce repeticiones válidas");
   }
+  if (
+    patch.durationSeconds != null &&
+    (!Number.isInteger(patch.durationSeconds) || patch.durationSeconds <= 0)
+  ) {
+    throw new Error("Introduce una duración válida");
+  }
   return replaceExercise(workout, exerciseId, (exercise) => ({
     ...exercise,
-    sets: exercise.sets.map((set) =>
-      set.id === setId
-        ? {
-            ...set,
-            ...patch,
-            completed: set.completed && patch.weightGrams !== null && patch.repetitions !== null,
-          }
-        : set,
-    ),
+    sets: exercise.sets.map((set) => {
+      if (set.id !== setId) return set;
+      const durationSeconds =
+        "durationSeconds" in patch
+          ? (patch.durationSeconds ?? null)
+          : (set.durationSeconds ?? null);
+      return {
+        ...set,
+        ...patch,
+        durationSeconds,
+        completed:
+          set.completed &&
+          patch.weightGrams !== null &&
+          (patch.repetitions !== null || durationSeconds !== null),
+      };
+    }),
   }));
 };
 
@@ -188,10 +202,10 @@ export const completeSet = (workout: Workout, exerciseId: string, setId: string)
       if (
         set.weightGrams === null ||
         set.weightGrams < 0 ||
-        set.repetitions === null ||
-        set.repetitions <= 0
+        ((set.repetitions === null || set.repetitions <= 0) &&
+          (set.durationSeconds == null || set.durationSeconds <= 0))
       ) {
-        throw new Error("Introduce un peso y repeticiones válidos");
+        throw new Error("Introduce un peso y repeticiones o duración válidos");
       }
       return { ...set, completed: true };
     }),

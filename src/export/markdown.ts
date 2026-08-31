@@ -26,6 +26,9 @@ export type ImportedWorkoutResult =
 
 const formatKg = (grams: number): string => (grams / 1000).toString();
 
+export const formatSetDuration = (durationSeconds: number): string =>
+  `${Math.floor(durationSeconds / 60)}:${(durationSeconds % 60).toString().padStart(2, "0")}`;
+
 const escapeMarkdown = (value: string): string => value.replaceAll("|", "\\|");
 
 export const workoutFileName = (workout: Pick<Workout, "id">): string => `Fuerza_${workout.id}.md`;
@@ -44,7 +47,12 @@ export const renderWorkoutMarkdown = (workout: Workout): string => {
     .map((exercise) => ({
       ...exercise,
       sets: exercise.sets
-        .filter((set) => set.completed && set.weightGrams !== null && set.repetitions !== null)
+        .filter(
+          (set) =>
+            set.completed &&
+            set.weightGrams !== null &&
+            (set.repetitions !== null || set.durationSeconds != null),
+        )
         .sort((a, b) => a.position - b.position),
     }))
     .filter((exercise) => exercise.sets.length > 0);
@@ -53,7 +61,7 @@ export const renderWorkoutMarkdown = (workout: Workout): string => {
 
   const frontMatter = [
     "---",
-    "schema_version: 1",
+    "schema_version: 2",
     "type: strength_workout",
     `date: ${workout.date}`,
     `started_at: ${workout.startedAt}`,
@@ -75,10 +83,11 @@ export const renderWorkoutMarkdown = (workout: Workout): string => {
     `- Categoría: ${exercise.categorySnapshot}`,
     `- Equipamiento: ${escapeMarkdown(exercise.equipmentSnapshot)}`,
     "",
-    "| Serie | Peso (kg) | Repeticiones |",
-    "|---:|---:|---:|",
+    "| Serie | Peso (kg) | Repeticiones | Duración |",
+    "|---:|---:|---:|---:|",
     ...exercise.sets.map(
-      (set, index) => `| ${index + 1} | ${formatKg(set.weightGrams!)} | ${set.repetitions} |`,
+      (set, index) =>
+        `| ${index + 1} | ${formatKg(set.weightGrams!)} | ${set.repetitions ?? ""} | ${set.durationSeconds == null ? "" : formatSetDuration(set.durationSeconds)} |`,
     ),
     "",
   ]);
@@ -92,7 +101,11 @@ export const renderWorkoutMarkdown = (workout: Workout): string => {
   ].join("\n");
 };
 
-const parseExercise = (section: string, position: number): PerformedExercise => {
+const parseExercise = (
+  section: string,
+  position: number,
+  schemaVersion: number,
+): PerformedExercise => {
   const lines = section.split("\n");
   const nameSnapshot = lines[0].trim().replaceAll("\\|", "|");
   const catalogExerciseId = section.match(/- Exercise ID: `([^`]+)`/)?.[1];
@@ -112,13 +125,25 @@ const parseExercise = (section: string, position: number): PerformedExercise => 
       .split("|")
       .slice(1, -1)
       .map((cell) => cell.trim());
+    const expectedCellCount = schemaVersion >= 2 ? 4 : 3;
+    if (cells.length !== expectedCellCount) {
+      throw new Error(`Serie inválida en el ejercicio ${position}`);
+    }
     const weight = Number(cells[1]);
-    const repetitions = Number(cells[2]);
+    const repetitions = cells[2] === "" ? null : Number(cells[2]);
+    const durationCell = schemaVersion >= 2 ? cells[3] : "";
+    const durationMatch = durationCell === "" ? null : durationCell.match(/^(\d+):([0-5]\d)$/);
+    if (durationCell !== "" && durationMatch === null) {
+      throw new Error(`Serie inválida en el ejercicio ${position}`);
+    }
+    const durationSeconds = durationMatch
+      ? Number(durationMatch[1]) * 60 + Number(durationMatch[2])
+      : null;
     if (
       !Number.isFinite(weight) ||
       weight < 0 ||
-      !Number.isInteger(repetitions) ||
-      repetitions <= 0
+      (repetitions !== null && (!Number.isInteger(repetitions) || repetitions <= 0)) ||
+      (repetitions === null && (durationSeconds === null || durationSeconds <= 0))
     ) {
       throw new Error(`Serie inválida en el ejercicio ${position}`);
     }
@@ -127,6 +152,7 @@ const parseExercise = (section: string, position: number): PerformedExercise => 
       position: index + 1,
       weightGrams: Math.round(weight * 1000),
       repetitions,
+      durationSeconds,
       completed: true,
     };
   });
@@ -153,12 +179,14 @@ export const parseWorkoutMarkdown = (
       typeof rawFrontMatter === "object" && rawFrontMatter !== null
         ? Reflect.get(rawFrontMatter, "schema_version")
         : undefined;
-    if (typeof schemaVersion === "number" && schemaVersion !== 1) {
+    if (typeof schemaVersion === "number" && ![1, 2].includes(schemaVersion)) {
       return { kind: "incompatible", schemaVersion, source };
     }
     const frontMatter = frontMatterSchema.parse(rawFrontMatter);
     const sections = match[2].split(/^## /m).slice(1);
-    const exercises = sections.map((section, index) => parseExercise(section, index + 1));
+    const exercises = sections.map((section, index) =>
+      parseExercise(section, index + 1, frontMatter.schema_version),
+    );
     if (exercises.length !== frontMatter.total_exercises) {
       throw new Error("El total de ejercicios no coincide");
     }

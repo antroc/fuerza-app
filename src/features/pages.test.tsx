@@ -20,7 +20,17 @@ const finalized = {
       categorySnapshot: "Pecho" as const,
       equipmentSnapshot: "barbell",
       position: 1,
-      sets: [{ id: "s1", position: 1, weightGrams: 60_000, repetitions: 10, completed: true }],
+      sets: [
+        { id: "s1", position: 1, weightGrams: 60_000, repetitions: 10, completed: true },
+        {
+          id: "s2",
+          position: 2,
+          weightGrams: 0,
+          repetitions: null,
+          durationSeconds: 90,
+          completed: true,
+        },
+      ],
     },
   ],
 };
@@ -90,6 +100,7 @@ describe("application pages", () => {
     expect(screen.getByText("600 kg")).toBeVisible();
     expect(screen.getByText("Pendiente de sincronización")).toBeVisible();
     expect(screen.getByText("barbell bench press")).toBeVisible();
+    expect(screen.getByText("1:30")).toBeVisible();
   });
 
   it("tests the GitHub connection before reporting it as saved", async () => {

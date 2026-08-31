@@ -12,6 +12,7 @@ export interface WorkoutSet {
   position: number;
   weightGrams: number | null;
   repetitions: number | null;
+  durationSeconds?: number | null;
   completed: boolean;
 }
 

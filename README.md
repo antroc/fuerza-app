@@ -1,6 +1,6 @@
 # Fuerza
 
-PWA personal y móvil para registrar entrenamientos de fuerza sin conexión. Mantiene el borrador y el historial en IndexedDB y sincroniza cada sesión finalizada como Markdown con un repositorio privado de GitHub.
+PWA personal y móvil para registrar entrenamientos de fuerza por repeticiones o duración sin conexión. Mantiene el borrador y el historial en IndexedDB y sincroniza cada sesión finalizada como Markdown con un repositorio privado de GitHub.
 
 ## Repositorios
 
