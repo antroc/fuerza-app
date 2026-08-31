@@ -71,7 +71,42 @@ describe("ActiveWorkoutPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Marcar serie 1 como completada" }));
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Introduce un peso y repeticiones válidos");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Introduce un peso y repeticiones o duración válidos",
+    );
+  });
+
+  it("records minutes and seconds for a timed set without repetitions", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.type(screen.getByLabelText("Peso de la serie 1 en kilogramos"), "0");
+    await user.type(screen.getByLabelText("Minutos de la serie 1"), "1");
+    await user.type(screen.getByLabelText("Segundos de la serie 1"), "30");
+    await user.click(screen.getByRole("button", { name: "Marcar serie 1 como completada" }));
+
+    expect(screen.getByText("Completada")).toBeVisible();
+  });
+
+  it("clears inherited repetitions when switching a set to duration", async () => {
+    const user = userEvent.setup();
+    const onFinish = vi.fn();
+    render(<Harness onFinish={onFinish} />);
+
+    await user.type(screen.getByLabelText("Peso de la serie 1 en kilogramos"), "0");
+    const repetitions = screen.getByLabelText("Repeticiones de la serie 1");
+    await user.type(repetitions, "8");
+    await user.click(screen.getByLabelText("Peso de la serie 1 en kilogramos"));
+    await user.clear(repetitions);
+    await user.type(screen.getByLabelText("Segundos de la serie 1"), "30");
+    await user.click(screen.getByRole("button", { name: "Marcar serie 1 como completada" }));
+    await user.click(screen.getByRole("button", { name: "Finalizar entrenamiento" }));
+
+    const requestedWorkout = onFinish.mock.calls[0][0] as Workout;
+    expect(requestedWorkout.exercises[0].sets[0]).toMatchObject({
+      repetitions: null,
+      durationSeconds: 30,
+    });
   });
 
   it("exposes textual completion and requests a final summary", async () => {

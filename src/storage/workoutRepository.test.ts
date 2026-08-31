@@ -126,7 +126,7 @@ describe("DexieWorkoutRepository", () => {
       workoutId: "20260818",
       path: "entrenamientos/Fuerza_20260818.md",
     });
-    expect(queue[0].content).toContain("schema_version: 1");
+    expect(queue[0].content).toContain("schema_version: 2");
   });
 
   it("does not duplicate an idempotent queue operation", async () => {

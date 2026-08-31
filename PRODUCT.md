@@ -14,7 +14,7 @@ Una sola persona registra sus propios entrenamientos de fuerza, principalmente d
 
 ## Product Purpose
 
-Fuerza permite seleccionar ejercicios, registrar series con peso y repeticiones, finalizar una sesión y conservarla localmente. Las sesiones finalizadas se exportan a Markdown estable y se sincronizan con un repositorio privado de GitHub sin un backend propio.
+Fuerza permite seleccionar ejercicios, registrar series con peso, repeticiones y duración opcional, finalizar una sesión y conservarla localmente. Las sesiones finalizadas se exportan a Markdown estable y se sincronizan con un repositorio privado de GitHub sin un backend propio.
 
 ## Brand Personality
 

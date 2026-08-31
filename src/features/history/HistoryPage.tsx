@@ -11,6 +11,9 @@ const syncLabels: Record<Workout["syncStatus"], string> = {
   error: "Error de sincronización",
 };
 
+const formatDuration = (durationSeconds: number): string =>
+  `${Math.floor(durationSeconds / 60)}:${(durationSeconds % 60).toString().padStart(2, "0")}`;
+
 export const HistoryPage = ({
   workouts,
   onResolveConflict,
@@ -82,6 +85,7 @@ export const HistoryPage = ({
                             <th>Serie</th>
                             <th>Peso</th>
                             <th>Repeticiones</th>
+                            <th>Duración</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -89,7 +93,12 @@ export const HistoryPage = ({
                             <tr key={set.id}>
                               <td>{setIndex + 1}</td>
                               <td>{((set.weightGrams ?? 0) / 1000).toLocaleString("es-ES")} kg</td>
-                              <td>{set.repetitions}</td>
+                              <td>{set.repetitions ?? "—"}</td>
+                              <td>
+                                {set.durationSeconds == null
+                                  ? "—"
+                                  : formatDuration(set.durationSeconds)}
+                              </td>
                             </tr>
                           ))}
                         </tbody>

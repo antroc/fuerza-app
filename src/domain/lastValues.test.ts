@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { Workout } from "./types";
 import { findLastValues } from "./lastValues";
 
-const workout = (date: string, weightGrams: number, repetitions: number): Workout => ({
+const workout = (
+  date: string,
+  weightGrams: number,
+  repetitions: number,
+  durationSeconds: number | null = null,
+): Workout => ({
   id: date.replaceAll("-", ""),
   date,
   startedAt: `${date}T18:00:00+02:00`,
@@ -22,7 +27,16 @@ const workout = (date: string, weightGrams: number, repetitions: number): Workou
       categorySnapshot: "Pecho",
       equipmentSnapshot: "barbell",
       position: 1,
-      sets: [{ id: crypto.randomUUID(), position: 1, weightGrams, repetitions, completed: true }],
+      sets: [
+        {
+          id: crypto.randomUUID(),
+          position: 1,
+          weightGrams,
+          repetitions,
+          durationSeconds,
+          completed: true,
+        },
+      ],
     },
   ],
 });
@@ -30,7 +44,10 @@ const workout = (date: string, weightGrams: number, repetitions: number): Workou
 describe("findLastValues", () => {
   it("uses the final completed set from the most recent workout", () => {
     expect(
-      findLastValues([workout("2026-08-17", 60_000, 10), workout("2026-08-18", 65_000, 8)], "0025"),
-    ).toEqual({ weightGrams: 65_000, repetitions: 8 });
+      findLastValues(
+        [workout("2026-08-17", 60_000, 10), workout("2026-08-18", 65_000, 8, 45)],
+        "0025",
+      ),
+    ).toEqual({ weightGrams: 65_000, repetitions: 8, durationSeconds: 45 });
   });
 });

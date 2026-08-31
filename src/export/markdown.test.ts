@@ -25,7 +25,14 @@ const workout: Workout = {
       sets: [
         { id: "s1", position: 1, weightGrams: 60_000, repetitions: 10, completed: true },
         { id: "s2", position: 2, weightGrams: 62_500, repetitions: 8, completed: true },
-        { id: "s3", position: 3, weightGrams: 65_000, repetitions: null, completed: false },
+        {
+          id: "s3",
+          position: 3,
+          weightGrams: 0,
+          repetitions: null,
+          durationSeconds: 90,
+          completed: true,
+        },
       ],
     },
     {
@@ -40,17 +47,17 @@ const workout: Workout = {
   ],
 };
 
-describe("Markdown v1", () => {
+describe("Markdown", () => {
   it("renders stable front matter, exact totals and only completed sets", () => {
     const markdown = renderWorkoutMarkdown(workout);
 
-    expect(markdown).toContain("schema_version: 1\ntype: strength_workout");
+    expect(markdown).toContain("schema_version: 2\ntype: strength_workout");
     expect(markdown).toContain("duration_minutes: 65");
     expect(markdown).toContain("total_exercises: 2");
-    expect(markdown).toContain("total_sets: 3");
+    expect(markdown).toContain("total_sets: 4");
     expect(markdown).toContain("total_volume_kg: 1400");
-    expect(markdown).toContain("| 2 | 62.5 | 8 |");
-    expect(markdown).not.toContain("| 3 | 65");
+    expect(markdown).toContain("| 2 | 62.5 | 8 |  |");
+    expect(markdown).toContain("| 3 | 0 |  | 1:30 |");
     expect(markdown.match(/schema_version:/g)).toHaveLength(1);
   });
 
@@ -72,15 +79,72 @@ describe("Markdown v1", () => {
       repetitions: 8,
       completed: true,
     });
+    expect(result.workout.exercises[0].sets[2]).toMatchObject({
+      repetitions: null,
+      durationSeconds: 90,
+      completed: true,
+    });
   });
 
   it("reports unknown schema versions without modifying content", () => {
-    const source = renderWorkoutMarkdown(workout).replace("schema_version: 1", "schema_version: 2");
+    const source = renderWorkoutMarkdown(workout).replace("schema_version: 2", "schema_version: 3");
 
     expect(parseWorkoutMarkdown(source, "sha-2")).toEqual({
       kind: "incompatible",
-      schemaVersion: 2,
+      schemaVersion: 3,
       source,
+    });
+  });
+
+  it("rejects a malformed non-empty duration in a v2 row with repetitions", () => {
+    const source = renderWorkoutMarkdown(workout).replace(
+      "| 1 | 60 | 10 |  |",
+      "| 1 | 60 | 10 | 1:2 |",
+    );
+
+    expect(parseWorkoutMarkdown(source, "malformed-duration-sha")).toMatchObject({
+      kind: "invalid",
+      source,
+    });
+  });
+
+  it("keeps importing workouts written with the v1 table", () => {
+    const source = `---
+schema_version: 1
+type: strength_workout
+date: 2026-08-17
+started_at: 2026-08-17T18:00:00+02:00
+finished_at: 2026-08-17T19:00:00+02:00
+timezone: Europe/Madrid
+duration_minutes: 60
+total_exercises: 1
+total_sets: 1
+total_volume_kg: 600
+categories:
+  - Pecho
+---
+
+# Entrenamiento de fuerza — 17/08/2026
+
+## barbell bench press
+
+- Exercise ID: \`0025\`
+- Categoría: Pecho
+- Equipamiento: barbell
+
+| Serie | Peso (kg) | Repeticiones |
+|---:|---:|---:|
+| 1 | 60 | 10 |
+`;
+
+    const result = parseWorkoutMarkdown(source, "legacy-sha");
+
+    expect(result.kind).toBe("imported");
+    if (result.kind !== "imported") return;
+    expect(result.workout.exercises[0].sets[0]).toMatchObject({
+      weightGrams: 60_000,
+      repetitions: 10,
+      durationSeconds: null,
     });
   });
 

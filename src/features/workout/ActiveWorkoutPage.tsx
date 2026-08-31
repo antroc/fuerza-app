@@ -31,14 +31,15 @@ interface SetInputProps {
   value: string;
   inputMode: "decimal" | "numeric";
   onCommit: (value: string) => void;
+  className?: string;
 }
 
-const SetInput = ({ label, value, inputMode, onCommit }: SetInputProps) => {
+const SetInput = ({ label, value, inputMode, onCommit, className = "" }: SetInputProps) => {
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
   return (
     <input
-      className="set-input"
+      className={`set-input${className ? ` ${className}` : ""}`}
       aria-label={label}
       inputMode={inputMode}
       value={draft}
@@ -69,19 +70,48 @@ export const ActiveWorkoutPage = ({
   const changeSet = (
     exerciseId: string,
     set: WorkoutSet,
-    patch: Partial<Pick<WorkoutSet, "weightGrams" | "repetitions">>,
+    patch: Partial<Pick<WorkoutSet, "weightGrams" | "repetitions" | "durationSeconds">>,
   ) => {
     try {
+      const weightGrams = "weightGrams" in patch ? (patch.weightGrams ?? null) : set.weightGrams;
+      const repetitions = "repetitions" in patch ? (patch.repetitions ?? null) : set.repetitions;
+      const durationSeconds =
+        "durationSeconds" in patch
+          ? (patch.durationSeconds ?? null)
+          : (set.durationSeconds ?? null);
       onWorkoutChange(
         updateSet(workout, exerciseId, set.id, {
-          weightGrams: patch.weightGrams ?? set.weightGrams,
-          repetitions: patch.repetitions ?? set.repetitions,
+          weightGrams,
+          repetitions,
+          durationSeconds,
         }),
       );
       setError(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo actualizar la serie");
     }
+  };
+
+  const changeDuration = (
+    exerciseId: string,
+    set: WorkoutSet,
+    part: "minutes" | "seconds",
+    value: string,
+  ) => {
+    const parsed = value === "" ? 0 : Number(value);
+    const isValid = Number.isInteger(parsed) && parsed >= 0 && (part === "minutes" || parsed < 60);
+    if (!isValid) {
+      setError(
+        part === "minutes" ? "Introduce minutos válidos" : "Introduce segundos entre 0 y 59",
+      );
+      return;
+    }
+    const currentDuration = set.durationSeconds ?? 0;
+    const minutes = part === "minutes" ? parsed : Math.floor(currentDuration / 60);
+    const seconds = part === "seconds" ? parsed : currentDuration % 60;
+    changeSet(exerciseId, set, {
+      durationSeconds: minutes === 0 && seconds === 0 ? null : minutes * 60 + seconds,
+    });
   };
 
   return (
@@ -201,6 +231,7 @@ export const ActiveWorkoutPage = ({
               <span>Serie</span>
               <span>kg</span>
               <span>reps</span>
+              <span>duración (min:s)</span>
               <span>Estado</span>
               <span />
             </div>
@@ -226,6 +257,31 @@ export const ActiveWorkoutPage = ({
                       })
                     }
                   />
+                  <div className="duration-inputs">
+                    <SetInput
+                      className="duration-input"
+                      label={`Minutos de la serie ${set.position}`}
+                      value={
+                        set.durationSeconds == null
+                          ? ""
+                          : Math.floor(set.durationSeconds / 60).toString()
+                      }
+                      inputMode="numeric"
+                      onCommit={(value) => changeDuration(exercise.id, set, "minutes", value)}
+                    />
+                    <span aria-hidden="true">:</span>
+                    <SetInput
+                      className="duration-input"
+                      label={`Segundos de la serie ${set.position}`}
+                      value={
+                        set.durationSeconds == null
+                          ? ""
+                          : (set.durationSeconds % 60).toString().padStart(2, "0")
+                      }
+                      inputMode="numeric"
+                      onCommit={(value) => changeDuration(exercise.id, set, "seconds", value)}
+                    />
+                  </div>
                   <button
                     className="completion-button"
                     aria-label={`${set.completed ? "Desmarcar" : "Marcar"} serie ${set.position} como completada`}
