@@ -150,3 +150,26 @@ test("reinicia y persiste vacía la sesión activa", async ({ page }) => {
   await expect(page.getByLabel("Fecha del entrenamiento")).toHaveValue("2026-08-21");
   await expect(page.getByRole("region", { name: "3/4 sit-up" })).toHaveCount(0);
 });
+
+test("mantiene los campos de la serie en una sola fila a 360 px", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto("./");
+  await page.getByLabel("Fecha del entrenamiento").fill("2026-09-01");
+  await page.getByRole("button", { name: "Comenzar entrenamiento" }).click();
+  await page.getByRole("button", { name: "Añadir ejercicio" }).click();
+  await page.getByRole("searchbox", { name: "Buscar ejercicio" }).fill("3/4 sit-up");
+  await page.getByRole("button", { name: "Añadir 3/4 sit-up", exact: true }).click();
+
+  const fields = [
+    page.getByLabel("Peso de la serie 1 en kilogramos"),
+    page.getByLabel("Repeticiones de la serie 1"),
+    page.getByLabel("Minutos de la serie 1"),
+    page.getByLabel("Segundos de la serie 1"),
+  ];
+  const boxes = await Promise.all(fields.map((field) => field.boundingBox()));
+
+  expect(boxes.every((box) => box !== null)).toBe(true);
+  expect(new Set(boxes.map((box) => Math.round(box!.y))).size).toBe(1);
+  expect(boxes.every((box) => box!.height >= 44)).toBe(true);
+  expect(Math.max(...boxes.map((box) => box!.x + box!.width))).toBeLessThanOrEqual(360);
+});
